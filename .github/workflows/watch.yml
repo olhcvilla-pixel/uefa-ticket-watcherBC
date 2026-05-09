@@ -1,0 +1,30 @@
+
+```yaml
+name: UEFA Ticket Watcher
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check page and send notification
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          # Fetch the page
+          curl -sL "https://europaleague.tickets.uefa.com/list/events" > /tmp/current.txt
+          
+          # Compare with previous run (using GitHub's cache)
+          if [ -f /tmp/previous.txt ]; then
+            if ! diff -q /tmp/previous.txt /tmp/current.txt; then
+              curl -H "Title: UEFA Tickets Changed" -d "Tickets for Europa League final may be available! Check now." https://ntfy.sh/$NTFY_TOPIC
+            fi
+          fi
+          
+          # Save current state for next run
+          cp /tmp/current.txt /tmp/previous.txt
+```
